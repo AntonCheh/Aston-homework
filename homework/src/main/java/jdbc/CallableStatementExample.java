@@ -1,3 +1,5 @@
+package jdbc;
+
 import java.sql.*;
 
 public class CallableStatementExample {
