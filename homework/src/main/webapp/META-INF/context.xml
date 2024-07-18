@@ -1,7 +1,0 @@
-<Context>
-    <Resource name="jdbc/PostgresDB" auth="Container" type="javax.sql.DataSource"
-              maxTotal="100" maxIdle="30" maxWaitMillis="10000"
-              username="myuser" password="mysecretpassword"
-              driverClassName="org.postgresql.Driver"
-              url="jdbc:postgresql://localhost:5432/lessondata"/>
-</Context>
