@@ -4,22 +4,32 @@ import com.google.gson.Gson;
 import dao.VerbDAO;
 import dto.ConjugationDTO;
 import dto.VerbDTO;
+import insert.VerbBatchInsert;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import model.Verb;
-import org.hibernate.Hibernate;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
 @WebServlet("/verbs")
 public class VerbServlet extends HttpServlet {
     private VerbDAO verbDAO = new VerbDAO();
+
+
+       @Override
+    public void init() throws ServletException {
+        super.init();
+        Set<String> verbs = VerbBatchInsert.inputVerb();
+        VerbDAO.batchInsertVerbsIfNotExists(verbs);
+    }
+
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -38,7 +48,7 @@ public class VerbServlet extends HttpServlet {
 
                 VerbDTO verbDTO = new VerbDTO();
                 verbDTO.setId(verb.getId());
-                verbDTO.setInfinitive(verb.getVerb());
+                verbDTO.setInfinitive(verb.getVerbo());
                 verbDTO.setConjugations(verb.getConjugations().stream().map(conjugation -> {
                     ConjugationDTO dto = new ConjugationDTO();
                     dto.setId(conjugation.getId());
@@ -67,7 +77,7 @@ public class VerbServlet extends HttpServlet {
             List<VerbDTO> verbDTOs = verbs.stream().map(verb -> {
                 VerbDTO dto = new VerbDTO();
                 dto.setId(verb.getId());
-                dto.setInfinitive(verb.getVerb());
+                dto.setInfinitive(verb.getVerbo());
                 dto.setConjugations(verb.getConjugations().stream().map(conjugation -> {
                     ConjugationDTO conjugationDTO = new ConjugationDTO();
                     conjugationDTO.setId(conjugation.getId());
@@ -100,7 +110,7 @@ public class VerbServlet extends HttpServlet {
             response.getWriter().write("Verb already exists");
         } else {
             Verb verb = new Verb();
-            verb.setVerb(infinitive);
+            verb.setVerbo(infinitive);
             verbDAO.saveVerb(verb);
             response.getWriter().write("Verb created");
         }
@@ -129,7 +139,7 @@ public class VerbServlet extends HttpServlet {
                 return;
             }
 
-            verb.setVerb(infinitive);
+            verb.setVerbo(infinitive);
             verbDAO.updateVerb(verb);
 
             response.getWriter().write("Verb updated");
@@ -145,21 +155,17 @@ public class VerbServlet extends HttpServlet {
         String verbIdParam = request.getParameter("id");
 
         if (verbIdParam == null || verbIdParam.isEmpty()) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("Parameter 'id' is missing or empty");
-            return;
-        }
-
-        try {
-            int verbId = Integer.parseInt(verbIdParam);
-            verbDAO.deleteVerb(verbId);
-            response.getWriter().write("Verb deleted");
-
-        } catch (NumberFormatException e) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("Invalid 'id' parameter: " + verbIdParam);
+            verbDAO.deleteAllVerbs();
+            response.getWriter().write("All verbs deleted");
+        } else {
+            try {
+                int verbId = Integer.parseInt(verbIdParam);
+                verbDAO.deleteVerb(verbId);
+                response.getWriter().write("Verb deleted");
+            } catch (NumberFormatException e) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("Invalid 'id' parameter: " + verbIdParam);
+            }
         }
     }
-
-
 }
