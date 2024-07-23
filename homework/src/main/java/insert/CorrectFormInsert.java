@@ -1,77 +1,65 @@
 package insert;
 
+import lombok.var;
 import model.CorrectConjugation;
-import model.Verb;
-import org.hibernate.Session;
-import org.hibernate.Transaction;
-import util.HibernateUtil;
+import org.hibernate.SessionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
+@Component
 public class CorrectFormInsert {
-    public static void batchInsertVerbs(Set<Map<String, String>> verbForms) {
-        Transaction transaction = null;
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            transaction = session.beginTransaction();
-            int count = 0;
-            for (Map<String, String> forms : verbForms) {
-                Verb newVerb = new Verb();
-                newVerb.setVerbo(forms.get("verbo"));
-                session.save(newVerb);
 
-                CorrectConjugation conjugation = new CorrectConjugation();
-                conjugation.setYo(forms.get("yo"));
-                conjugation.setTu(forms.get("tu"));
-                conjugation.setEl_ella(forms.get("el_ella"));
-                conjugation.setNosotros(forms.get("nosotros"));
-                conjugation.setVosotros(forms.get("vosotros"));
-                conjugation.setEllos(forms.get("ellos"));
-                conjugation.setVerb(newVerb);
+    private static SessionFactory sessionFactory;
 
-                session.save(conjugation);
-
-                count++;
-                // Пакетная вставка каждые 20 записей
-                if (count % 20 == 0) {
-                    session.flush();
-                    session.clear();
-                }
-            }
-            session.flush();
-            session.clear();
-            transaction.commit();
-        } catch (Exception e) {
-            if (transaction != null) {
-                transaction.rollback();
-            }
-            e.printStackTrace();
-        }
+    @Autowired
+    public CorrectFormInsert(SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory;
     }
 
-    public static Set<Map<String, String>> inputVerbForms() {
-        // Определите формы глаголов здесь
-        String[][] verbFormsArray = {
-                {"poder", "puedo", "puedes", "puede", "podemos", "podéis", "pueden"},
-                // Добавьте больше глаголов здесь...
+    @Transactional
+    public static void batchInsertConjugations(Set<Map<String, String>> conjugations) {
+        var session = sessionFactory.getCurrentSession();
+        int count = 0;
+        for (var forms : conjugations) {
+            var conjugation = new CorrectConjugation();
+            conjugation.setYo(forms.get("yo"));
+            conjugation.setTu(forms.get("tu"));
+            conjugation.setEl_ella(forms.get("el_ella"));
+            conjugation.setNosotros(forms.get("nosotros"));
+            conjugation.setVosotros(forms.get("vosotros"));
+            conjugation.setEllos(forms.get("ellos"));
+
+            session.save(conjugation);
+            count++;
+            if (count % 20 == 0) {
+                session.flush();
+                session.clear();
+            }
+        }
+        session.flush();
+        session.clear();
+    }
+
+    public static Set<Map<String, String>> inputConjugations() {
+        String[][] conjugationFormsArray = {
+                {"puedo", "puedes", "puede", "podemos", "podéis", "pueden"},
+                {"como", "comes", "come", "comemos", "coméis", "comen"}
         };
 
-        Set<Map<String, String>> input = new TreeSet<>((m1, m2) -> m1.get("verbo").compareTo(m2.get("verbo")));
-        for (String[] forms : verbFormsArray) {
-            Map<String, String> verbMap = new HashMap<>();
-            verbMap.put("verbo", forms[0]);
-            verbMap.put("yo", forms[1]);
-            verbMap.put("tu", forms[2]);
-            verbMap.put("el_ella", forms[3]);
-            verbMap.put("nosotros", forms[4]);
-            verbMap.put("vosotros", forms[5]);
-            verbMap.put("ellos", forms[6]);
-            input.add(verbMap);
+        Set<Map<String, String>> input = new TreeSet<>((m1, m2) -> m1.get("yo").compareTo(m2.get("yo")));
+        for (String[] forms : conjugationFormsArray) {
+            Map<String, String> conjugationMap = new HashMap<>();
+            conjugationMap.put("yo", forms[0]);
+            conjugationMap.put("tu", forms[1]);
+            conjugationMap.put("el_ella", forms[2]);
+            conjugationMap.put("nosotros", forms[3]);
+            conjugationMap.put("vosotros", forms[4]);
+            conjugationMap.put("ellos", forms[5]);
+            input.add(conjugationMap);
         }
         return input;
-    }
-
-    public static void main(String[] args) {
-        Set<Map<String, String>> verbs = inputVerbForms();
-        batchInsertVerbs(verbs);
     }
 }

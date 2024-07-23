@@ -2,17 +2,29 @@ package dao;
 
 import model.Conjugation;
 import model.CorrectConjugation;
-import org.hibernate.Session;
-import org.hibernate.Transaction;
-import util.HibernateUtil;
+import org.hibernate.SessionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Repository
 public class ConjugationDAO {
-    private final CorrectConjugationDAO correctConjugationDAO = new CorrectConjugationDAO();
+
+    private final SessionFactory sessionFactory;
+
+    private final CorrectConjugationDAO correctConjugationDAO;
+
+    @Autowired
+    public ConjugationDAO(LocalSessionFactoryBean localSessionFactoryBean, CorrectConjugationDAO correctConjugationDAO) {
+        this.sessionFactory = localSessionFactoryBean.getObject();
+        this.correctConjugationDAO = correctConjugationDAO;
+    }
 
     private boolean isValidConjugation(Conjugation conjugation) {
-        CorrectConjugation correctConjugation = correctConjugationDAO.getCorrectConjugationByVerbId(conjugation.getVerb().getId());
+        CorrectConjugation correctConjugation = correctConjugationDAO.getCorrectConjugationById(conjugation.getVerb().getId());
         if (correctConjugation == null) {
             return false;
         }
@@ -24,78 +36,40 @@ public class ConjugationDAO {
                 correctConjugation.getEllos().equals(conjugation.getEllos());
     }
 
+    @Transactional
     public void saveConjugation(Conjugation conjugation) throws Exception {
         if (!isValidConjugation(conjugation)) {
             throw new Exception("Invalid conjugation data");
         }
-        Transaction transaction = null;
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            transaction = session.beginTransaction();
-            session.save(conjugation);
-            transaction.commit();
-        } catch (Exception e) {
-            if (transaction != null) {
-                transaction.rollback();
-            }
-            throw e;
-        }
+        sessionFactory.getCurrentSession().save(conjugation);
     }
 
+    @Transactional(readOnly = true)
     public List<Conjugation> getConjugationsByVerbId(int verbId) {
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            return session.createQuery("from Conjugation where verb.id = :verbId", Conjugation.class)
-                    .setParameter("verbId", verbId)
-                    .list();
-        }
+        return sessionFactory.getCurrentSession()
+                .createQuery("from Conjugation where verb.id = :verbId", Conjugation.class)
+                .setParameter("verbId", verbId)
+                .list();
     }
 
+    @Transactional(readOnly = true)
     public Conjugation getConjugationById(int id) {
-        Transaction transaction = null;
-        Conjugation conjugation = null;
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            transaction = session.beginTransaction();
-            conjugation = session.get(Conjugation.class, id);
-            transaction.commit();
-        } catch (Exception e) {
-            if (transaction != null) {
-                transaction.rollback();
-            }
-            e.printStackTrace();
-        }
-        return conjugation;
+        return sessionFactory.getCurrentSession().get(Conjugation.class, id);
     }
 
+    @Transactional
     public void deleteConjugation(int id) {
-        Transaction transaction = null;
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            transaction = session.beginTransaction();
-            Conjugation conjugation = session.get(Conjugation.class, id);
-            if (conjugation != null) {
-                session.delete(conjugation);
-                transaction.commit();
-            }
-        } catch (Exception e) {
-            if (transaction != null) {
-                transaction.rollback();
-            }
-            e.printStackTrace();
+        Conjugation conjugation = getConjugationById(id);
+        if (conjugation != null) {
+            sessionFactory.getCurrentSession().delete(conjugation);
         }
     }
 
+    @Transactional
     public void updateConjugation(Conjugation conjugation) throws Exception {
         if (!isValidConjugation(conjugation)) {
             throw new Exception("Invalid conjugation data");
         }
-        Transaction transaction = null;
-        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            transaction = session.beginTransaction();
-            session.update(conjugation);
-            transaction.commit();
-        } catch (Exception e) {
-            if (transaction != null) {
-                transaction.rollback();
-            }
-            throw e;
-        }
+        sessionFactory.getCurrentSession().update(conjugation);
     }
 }

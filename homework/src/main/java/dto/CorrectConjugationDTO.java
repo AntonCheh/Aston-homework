@@ -22,6 +22,6 @@ public class CorrectConjugationDTO {
 
     public String ellos;
 
-    public Verb verb;
+   // public Verb verb;
 
 }

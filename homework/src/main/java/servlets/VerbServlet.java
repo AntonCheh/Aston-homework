@@ -11,25 +11,27 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import model.Verb;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.context.support.SpringBeanAutowiringSupport;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
 @WebServlet("/verbs")
 public class VerbServlet extends HttpServlet {
-    private VerbDAO verbDAO = new VerbDAO();
 
+    @Autowired
+    private VerbDAO verbDAO;
 
-       @Override
+    @Override
     public void init() throws ServletException {
         super.init();
+        SpringBeanAutowiringSupport.processInjectionBasedOnCurrentContext(this);
         Set<String> verbs = VerbBatchInsert.inputVerb();
-        VerbDAO.batchInsertVerbsIfNotExists(verbs);
+        VerbDAO.batchInsertVerbsIfNotExists(verbs, verbDAO.getSessionFactory());
     }
-
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -100,7 +102,6 @@ public class VerbServlet extends HttpServlet {
         }
     }
 
-
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String infinitive = request.getParameter("infinitive");
@@ -115,8 +116,6 @@ public class VerbServlet extends HttpServlet {
             response.getWriter().write("Verb created");
         }
     }
-
-
 
     @Override
     protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

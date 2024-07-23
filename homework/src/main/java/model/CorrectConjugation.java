@@ -29,8 +29,8 @@ public class CorrectConjugation {
     @Column(name = "ellos")
     public String ellos;
 
-    @ManyToOne
-    @JoinColumn(name = "verb_id")
-    public Verb verb;
+//    @ManyToOne
+//    @JoinColumn(name = "verb_id")
+//    public Verb verb;
 
 }

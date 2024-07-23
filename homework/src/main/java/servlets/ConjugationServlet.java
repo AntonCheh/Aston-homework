@@ -2,23 +2,39 @@ package servlets;
 
 import com.google.gson.Gson;
 import dao.ConjugationDAO;
-import dao.VerbDAO;
+import dao.CorrectConjugationDAO;
 import dto.ConjugationDTO;
+import insert.CorrectFormInsert;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import model.Conjugation;
-import model.Verb;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.context.support.SpringBeanAutowiringSupport;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @WebServlet("/conjugations")
 public class ConjugationServlet extends HttpServlet {
-    private final ConjugationDAO conjugationDAO = new ConjugationDAO();
-    private final VerbDAO verbDAO = new VerbDAO();
+
+    @Autowired
+    private ConjugationDAO conjugationDAO;
+
+    @Autowired
+    private CorrectConjugationDAO correctConjugationDAO;
+
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        SpringBeanAutowiringSupport.processInjectionBasedOnCurrentContext(this);
+        Set<Map<String, String>> conjugations = CorrectFormInsert.inputConjugations();
+        CorrectFormInsert.batchInsertConjugations(conjugations);
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -63,17 +79,14 @@ public class ConjugationServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String yo = request.getParameter("yo");
+        String tu = request.getParameter("tu");
+        String el_ella = request.getParameter("el_ella");
+        String vosotros = request.getParameter("vosotros");
+        String nosotros = request.getParameter("nosotros");
+        String ellos = request.getParameter("ellos");
+
         try {
-            String yo = request.getParameter("yo");
-            String tu = request.getParameter("tu");
-            String el_ella = request.getParameter("el_ella");
-            String vosotros = request.getParameter("vosotros");
-            String nosotros = request.getParameter("nosotros");
-            String ellos = request.getParameter("ellos");
-            String verbId = request.getParameter("verbId");
-
-            Verb verb = verbDAO.getVerbById(Integer.parseInt(verbId));
-
             Conjugation conjugation = new Conjugation();
             conjugation.setYo(yo);
             conjugation.setTu(tu);
@@ -81,14 +94,14 @@ public class ConjugationServlet extends HttpServlet {
             conjugation.setVosotros(vosotros);
             conjugation.setNosotros(nosotros);
             conjugation.setEllos(ellos);
-            conjugation.setVerb(verb);
 
             conjugationDAO.saveConjugation(conjugation);
-            response.getWriter().write("Conjugation created");
 
+            response.getWriter().write("Conjugation created");
         } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("Error: " + e.getMessage());
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("Error creating conjugation: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -102,7 +115,6 @@ public class ConjugationServlet extends HttpServlet {
             String vosotros = request.getParameter("vosotros");
             String nosotros = request.getParameter("nosotros");
             String ellos = request.getParameter("ellos");
-            String verbId = request.getParameter("verbId");
 
             if (conjugationIdParam == null || conjugationIdParam.isEmpty()) {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -119,15 +131,12 @@ public class ConjugationServlet extends HttpServlet {
                 return;
             }
 
-            Verb verb = verbDAO.getVerbById(Integer.parseInt(verbId));
-
             conjugation.setYo(yo);
             conjugation.setTu(tu);
             conjugation.setEl_ella(el_ella);
             conjugation.setVosotros(vosotros);
             conjugation.setNosotros(nosotros);
             conjugation.setEllos(ellos);
-            conjugation.setVerb(verb);
 
             conjugationDAO.updateConjugation(conjugation);
             response.getWriter().write("Conjugation updated");
@@ -151,12 +160,11 @@ public class ConjugationServlet extends HttpServlet {
         try {
             int conjugationId = Integer.parseInt(conjugationIdParam);
             conjugationDAO.deleteConjugation(conjugationId);
-            response.getWriter().write("conjugation deleted");
+            response.getWriter().write("Conjugation deleted");
 
         } catch (NumberFormatException e) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             response.getWriter().write("Invalid 'id' parameter: " + conjugationIdParam);
         }
     }
-
 }
